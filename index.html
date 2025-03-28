@@ -3,538 +3,339 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crosshair Studio</title>
+  <title>Crosshair Studio - Desktop Application</title>
   <style>
-    :root {
-      --bg-color: #121212;
-      --bg-lighter: #202020;
-      --primary: #FF9800;
-      --text-color: #FFFFFF;
-      --text-secondary: #AAAAAA;
-      --nav-width: 80px;
-      --divider-color: #333333;
-    }
-    
-    * {
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+      color: #e1e1e1;
+      line-height: 1.6;
     }
     
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      display: flex;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-    
-    .nav {
-      width: var(--nav-width);
-      background-color: #101010;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding-top: 20px;
-    }
-    
-    .nav-item {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px 0;
-      cursor: pointer;
-      color: var(--text-secondary);
-      transition: color 0.3s;
-    }
-    
-    .nav-item.active {
-      color: var(--primary);
-    }
-    
-    .nav-item:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-    }
-    
-    .nav-icon {
-      font-size: 24px;
-      margin-bottom: 4px;
-    }
-    
-    .nav-label {
-      font-size: 12px;
-    }
-    
-    .divider {
-      width: 1px;
-      background-color: var(--divider-color);
-    }
-    
-    .content {
-      flex: 1;
-      background-color: var(--bg-lighter);
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
       padding: 20px;
-      overflow-y: auto;
     }
     
-    .header {
-      padding: 16px;
-      background-color: #101010;
-      display: flex;
-      align-items: center;
-    }
-    
-    .header h1 {
-      flex: 1;
-    }
-    
-    .page {
-      display: none;
-      padding: 20px;
-      height: 100%;
-    }
-    
-    .page.active {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .welcome-icon {
-      font-size: 100px;
-      color: var(--primary);
-      margin-bottom: 24px;
-    }
-    
-    .welcome-title {
-      font-size: 28px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-    
-    .welcome-subtitle {
-      font-size: 16px;
-      color: var(--text-secondary);
-      margin-bottom: 32px;
+    header {
       text-align: center;
+      padding: 40px 0;
+      border-bottom: 1px solid #333;
     }
     
-    .btn {
-      background-color: var(--primary);
-      color: black;
-      border: none;
-      padding: 12px 24px;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
+    h1 {
+      font-size: 3rem;
+      margin: 0;
+      background: linear-gradient(90deg, #00f260, #0575e6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     
-    .btn:hover {
-      background-color: #FFB74D;
+    h2 {
+      font-size: 2rem;
+      color: #FF6B00;
+      margin-top: 40px;
     }
     
-    .crosshair-preview {
-      width: 200px;
-      height: 200px;
-      background-color: rgba(0, 0, 0, 0.5);
-      position: relative;
-      margin-bottom: 32px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    h3 {
+      font-size: 1.5rem;
+      color: #0575e6;
     }
     
-    .crosshair {
-      color: var(--primary);
-      font-size: 32px;
+    .subtitle {
+      font-size: 1.2rem;
+      color: #999;
     }
     
-    .settings-section {
-      width: 100%;
-      max-width: 500px;
-      margin-bottom: 24px;
-    }
-    
-    .settings-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 16px;
-      color: var(--primary);
-    }
-    
-    .settings-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    
-    .settings-label {
-      flex: 1;
-    }
-    
-    .settings-control {
-      flex: 2;
-    }
-    
-    .slider {
-      width: 100%;
-      -webkit-appearance: none;
-      height: 4px;
-      background: #333;
-      outline: none;
-      border-radius: 2px;
-    }
-    
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      background: var(--primary);
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    
-    .color-picker {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .color-option {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-    
-    .color-option.active {
-      border-color: white;
-    }
-    
-    .profiles-grid {
+    .feature-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
-      width: 100%;
-      max-width: 800px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 30px;
+      margin-top: 40px;
     }
     
-    .profile-card {
-      background-color: rgba(255, 255, 255, 0.05);
+    .feature-card {
+      background-color: #1D1D1D;
       border-radius: 8px;
-      padding: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s;
+      padding: 25px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #333;
     }
     
-    .profile-card:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      border-color: #FF6B00;
     }
     
-    .profile-title {
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      color: #FF6B00;
+    }
+    
+    .feature-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #e1e1e1;
+    }
+    
+    .code-block {
+      background-color: #121212;
+      border-radius: 6px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 20px 0;
+      border-left: 4px solid #FF6B00;
+    }
+    
+    code {
+      font-family: 'Consolas', 'Monaco', monospace;
+      color: #e1e1e1;
+    }
+    
+    .key {
+      color: #6196cc;
+    }
+    
+    .string {
+      color: #ce9178;
+    }
+    
+    .number {
+      color: #b5cea8;
+    }
+    
+    .boolean {
+      color: #569cd6;
+    }
+    
+    .comment {
+      color: #608b4e;
+    }
+    
+    .class {
+      color: #4ec9b0;
+    }
+    
+    .keyword {
+      color: #c586c0;
+    }
+    
+    footer {
+      text-align: center;
+      margin-top: 100px;
+      padding: 30px 0;
+      color: #666;
+      border-top: 1px solid #333;
+    }
+    
+    .download-btn {
+      display: inline-block;
+      background: linear-gradient(90deg, #FF6B00, #FF8B00);
+      color: white;
+      padding: 15px 30px;
+      border-radius: 30px;
       font-weight: bold;
-      margin-bottom: 8px;
+      text-decoration: none;
+      margin-top: 30px;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     
-    .profile-game {
-      color: var(--text-secondary);
-      font-size: 14px;
-      margin-bottom: 16px;
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(255, 107, 0, 0.3);
     }
     
-    .profile-preview {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 4px;
+    .preview-image {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 8px;
+      margin: 30px auto;
+      display: block;
+      border: 1px solid #333;
     }
   </style>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
 <body>
-  <div class="nav">
-    <div class="nav-item active" data-page="home">
-      <span class="material-icons nav-icon">home</span>
-      <span class="nav-label">Home</span>
-    </div>
-    <div class="nav-item" data-page="crosshair">
-      <span class="material-icons nav-icon">gps_fixed</span>
-      <span class="nav-label">Crosshair</span>
-    </div>
-    <div class="nav-item" data-page="profiles">
-      <span class="material-icons nav-icon">person</span>
-      <span class="nav-label">Profiles</span>
-    </div>
-    <div class="nav-item" data-page="settings">
-      <span class="material-icons nav-icon">settings</span>
-      <span class="nav-label">Settings</span>
-    </div>
-    <div class="nav-item" data-page="about">
-      <span class="material-icons nav-icon">info</span>
-      <span class="nav-label">About</span>
-    </div>
-  </div>
-  
-  <div class="divider"></div>
-  
-  <div class="content">
-    <div class="header">
+  <div class="container">
+    <header>
       <h1>Crosshair Studio</h1>
-    </div>
+      <p class="subtitle">A powerful desktop application for creating, customizing, and exporting gaming crosshairs</p>
+    </header>
     
-    <div class="page active" id="home">
-      <span class="material-icons welcome-icon">gps_fixed</span>
-      <h2 class="welcome-title">Welcome to Crosshair Studio</h2>
-      <p class="welcome-subtitle">Create, customize and export gaming crosshairs<br>for your favorite games</p>
-      <button class="btn" id="create-crosshair">Create New Crosshair</button>
-    </div>
+    <h2>Advanced Crosshair Model</h2>
+    <p>
+      Our advanced crosshair model supports extensive customization options including:
+    </p>
     
-    <div class="page" id="crosshair">
-      <div class="crosshair-preview">
-        <span class="material-icons crosshair">add</span>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-title">Component-Based Design</div>
+        <p>Each crosshair is made up of individual components that can be customized separately:</p>
+        <ul>
+          <li>Line components (top, right, bottom, left)</li>
+          <li>Circle components (inner and outer)</li>
+          <li>Dot component (center)</li>
+        </ul>
       </div>
       
-      <div class="settings-section">
-        <h3 class="settings-title">Crosshair Style</h3>
-        <div class="settings-row">
-          <label class="settings-label">Shape</label>
-          <div class="settings-control">
-            <select id="shape-select" class="shape-select">
-              <option value="add">Plus</option>
-              <option value="add_circle">Circle</option>
-              <option value="clear_all">X</option>
-              <option value="expand_less">Triangle</option>
-              <option value="adjust">Dot</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="settings-row">
-          <label class="settings-label">Size</label>
-          <div class="settings-control">
-            <input type="range" min="16" max="64" value="32" class="slider" id="size-slider">
-          </div>
-        </div>
-        
-        <div class="settings-row">
-          <label class="settings-label">Thickness</label>
-          <div class="settings-control">
-            <input type="range" min="1" max="5" value="2" class="slider" id="thickness-slider">
-          </div>
-        </div>
-        
-        <div class="settings-row">
-          <label class="settings-label">Color</label>
-          <div class="settings-control">
-            <div class="color-picker">
-              <div class="color-option active" style="background-color: #FF9800;" data-color="#FF9800"></div>
-              <div class="color-option" style="background-color: #4CAF50;" data-color="#4CAF50"></div>
-              <div class="color-option" style="background-color: #2196F3;" data-color="#2196F3"></div>
-              <div class="color-option" style="background-color: #E91E63;" data-color="#E91E63"></div>
-              <div class="color-option" style="background-color: #FFFFFF;" data-color="#FFFFFF"></div>
-            </div>
-          </div>
-        </div>
+      <div class="feature-card">
+        <div class="feature-title">Styling Options</div>
+        <p>Each component can be customized with:</p>
+        <ul>
+          <li>Individual colors</li>
+          <li>Opacity levels</li>
+          <li>Thickness adjustments</li>
+          <li>Outline thickness and color</li>
+          <li>Line cap styles (butt, round, square)</li>
+        </ul>
       </div>
       
-      <button class="btn">Save Crosshair</button>
-    </div>
-    
-    <div class="page" id="profiles">
-      <div class="profiles-grid">
-        <div class="profile-card">
-          <div class="profile-title">Default Profile</div>
-          <div class="profile-game">All Games</div>
-          <div class="profile-preview">
-            <span class="material-icons" style="color: #FF9800;">add</span>
-          </div>
-        </div>
-        
-        <div class="profile-card">
-          <div class="profile-title">CS2 Profile</div>
-          <div class="profile-game">Counter-Strike 2</div>
-          <div class="profile-preview">
-            <span class="material-icons" style="color: #4CAF50;">add</span>
-          </div>
-        </div>
-        
-        <div class="profile-card">
-          <div class="profile-title">Valorant Profile</div>
-          <div class="profile-game">Valorant</div>
-          <div class="profile-preview">
-            <span class="material-icons" style="color: #E91E63;">add_circle</span>
-          </div>
-        </div>
-        
-        <div class="profile-card">
-          <div class="profile-title">Precision Profile</div>
-          <div class="profile-game">Apex Legends</div>
-          <div class="profile-preview">
-            <span class="material-icons" style="color: #2196F3;">adjust</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="page" id="settings">
-      <div class="settings-section">
-        <h3 class="settings-title">Application Settings</h3>
-        
-        <div class="settings-row">
-          <label class="settings-label">Application Theme</label>
-          <div class="settings-control">
-            <select>
-              <option>Dark (Default)</option>
-              <option>Light</option>
-              <option>System</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="settings-row">
-          <label class="settings-label">Auto Save</label>
-          <div class="settings-control">
-            <select>
-              <option>Enabled</option>
-              <option>Disabled</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="settings-row">
-          <label class="settings-label">Export Format</label>
-          <div class="settings-control">
-            <select>
-              <option>CSV</option>
-              <option>JSON</option>
-              <option>XML</option>
-            </select>
-          </div>
-        </div>
+      <div class="feature-card">
+        <div class="feature-title">Positioning Control</div>
+        <p>Advanced positioning control for each component:</p>
+        <ul>
+          <li>Precise offsets from center</li>
+          <li>Length and gap adjustments for lines</li>
+          <li>Radius settings for circles</li>
+          <li>Size customization for dots</li>
+        </ul>
       </div>
       
-      <div class="settings-section">
-        <h3 class="settings-title">Performance Settings</h3>
-        
-        <div class="settings-row">
-          <label class="settings-label">Smooth Animation</label>
-          <div class="settings-control">
-            <select>
-              <option>Enabled</option>
-              <option>Disabled</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="settings-row">
-          <label class="settings-label">Background Effects</label>
-          <div class="settings-control">
-            <select>
-              <option>Enabled</option>
-              <option>Disabled</option>
-            </select>
-          </div>
-        </div>
+      <div class="feature-card">
+        <div class="feature-title">Animation Effects</div>
+        <p>Bring crosshairs to life with dynamic animations:</p>
+        <ul>
+          <li>Breathing effect</li>
+          <li>Pulsing effect</li>
+          <li>Blinking effect</li>
+          <li>Scaling effect</li>
+          <li>Rotation effect</li>
+          <li>Adjustable speed and intensity</li>
+        </ul>
       </div>
-    </div>
-    
-    <div class="page" id="about">
-      <span class="material-icons welcome-icon">info</span>
-      <h2 class="welcome-title">About Crosshair Studio</h2>
-      <p class="welcome-subtitle">Version 1.0.0<br>Created with Flutter & C++</p>
       
-      <div style="text-align: center; margin-top: 24px; max-width: 600px;">
-        <p style="margin-bottom: 16px;">
-          Crosshair Studio is a desktop application for creating, customizing and exporting gaming crosshairs.
-          It provides an intuitive interface to design your perfect crosshair for any game.
-        </p>
-        <p style="margin-bottom: 16px;">
-          Features include:
-        </p>
-        <ul style="list-style: none; margin-bottom: 24px;">
-          <li>✓ Multiple crosshair styles and shapes</li>
-          <li>✓ Complete color customization</li>
-          <li>✓ Size and thickness adjustments</li>
-          <li>✓ Profile management for different games</li>
-          <li>✓ CSV export for sharing configurations</li>
+      <div class="feature-card">
+        <div class="feature-title">Global Properties</div>
+        <p>Apply global settings to quickly adjust the entire crosshair:</p>
+        <ul>
+          <li>Global scaling</li>
+          <li>Global opacity</li>
+          <li>Global color override</li>
+          <li>Descriptive naming</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-title">Export Options</div>
+        <p>Share your crosshair designs:</p>
+        <ul>
+          <li>CSV export with all properties</li>
+          <li>Profile management</li>
+          <li>Game-specific configurations</li>
         </ul>
       </div>
     </div>
+    
+    <h2>Code Showcase</h2>
+    
+    <h3>Component Model Definition</h3>
+    <div class="code-block">
+      <code>
+<span class="comment">/// Basic shape component</span><br>
+<span class="keyword">class</span> <span class="class">ShapeComponent</span> {<br>
+&nbsp;&nbsp;<span class="comment">/// Whether the component is enabled</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">bool</span> enabled;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The color of the component</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">Color</span> color;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The opacity of the component (0.0 - 1.0)</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">double</span> opacity;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The thickness of the component</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">double</span> thickness;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The outline thickness of the component</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">double</span> outlineThickness;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The outline color of the component</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">Color</span> outlineColor;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The line cap style of the component</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">LineCapStyle</span> capStyle;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The offset from center</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">Offset</span> offset;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">// ... methods not shown for brevity</span><br>
+}
+      </code>
+    </div>
+    
+    <h3>Crosshair Model Definition</h3>
+    <div class="code-block">
+      <code>
+<span class="comment">/// A model representing a customizable crosshair</span><br>
+<span class="keyword">class</span> <span class="class">CrosshairModel</span> {<br>
+&nbsp;&nbsp;<span class="comment">/// The unique identifier</span><br>
+&nbsp;&nbsp;<span class="keyword">final</span> <span class="class">String</span> id;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The name</span><br>
+&nbsp;&nbsp;<span class="class">String</span> name;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// The description</span><br>
+&nbsp;&nbsp;<span class="class">String</span> description;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Global scale factor</span><br>
+&nbsp;&nbsp;<span class="class">double</span> scale;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Global opacity</span><br>
+&nbsp;&nbsp;<span class="class">double</span> opacity;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Global color - will be applied if individual components don't specify a color</span><br>
+&nbsp;&nbsp;<span class="class">Color</span>? globalColor;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Top line component</span><br>
+&nbsp;&nbsp;<span class="class">LineComponent</span> topLine;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Right line component</span><br>
+&nbsp;&nbsp;<span class="class">LineComponent</span> rightLine;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Bottom line component</span><br>
+&nbsp;&nbsp;<span class="class">LineComponent</span> bottomLine;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Left line component</span><br>
+&nbsp;&nbsp;<span class="class">LineComponent</span> leftLine;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Outer circle component</span><br>
+&nbsp;&nbsp;<span class="class">CircleComponent</span> outerCircle;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Inner circle component</span><br>
+&nbsp;&nbsp;<span class="class">CircleComponent</span> innerCircle;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Center dot component</span><br>
+&nbsp;&nbsp;<span class="class">DotComponent</span> centerDot;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">/// Animation properties</span><br>
+&nbsp;&nbsp;<span class="class">AnimationProperties</span> animation;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;<span class="comment">// ... methods not shown for brevity</span><br>
+}
+      </code>
+    </div>
+    
+    <footer>
+      <p>Crosshair Studio - A Flutter and C++ desktop application</p>
+      <p>© 2025 All Rights Reserved</p>
+    </footer>
   </div>
-  
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Navigation
-      const navItems = document.querySelectorAll('.nav-item');
-      const pages = document.querySelectorAll('.page');
-      
-      navItems.forEach(item => {
-        item.addEventListener('click', function() {
-          const targetPage = this.getAttribute('data-page');
-          
-          // Update active nav item
-          navItems.forEach(navItem => navItem.classList.remove('active'));
-          this.classList.add('active');
-          
-          // Show target page
-          pages.forEach(page => page.classList.remove('active'));
-          document.getElementById(targetPage).classList.add('active');
-        });
-      });
-      
-      // Create crosshair button
-      const createCrosshairButton = document.getElementById('create-crosshair');
-      createCrosshairButton.addEventListener('click', function() {
-        navItems.forEach(navItem => navItem.classList.remove('active'));
-        document.querySelector('[data-page="crosshair"]').classList.add('active');
-        
-        pages.forEach(page => page.classList.remove('active'));
-        document.getElementById('crosshair').classList.add('active');
-      });
-      
-      // Crosshair customization
-      const shapeSelect = document.getElementById('shape-select');
-      const sizeSlider = document.getElementById('size-slider');
-      const thicknessSlider = document.getElementById('thickness-slider');
-      const colorOptions = document.querySelectorAll('.color-option');
-      const crosshairElement = document.querySelector('.crosshair');
-      
-      // Update crosshair on shape change
-      shapeSelect.addEventListener('change', function() {
-        crosshairElement.textContent = this.value;
-      });
-      
-      // Update crosshair on size change
-      sizeSlider.addEventListener('input', function() {
-        crosshairElement.style.fontSize = this.value + 'px';
-      });
-      
-      // Update crosshair on thickness change
-      thicknessSlider.addEventListener('input', function() {
-        const value = this.value;
-        crosshairElement.style.fontWeight = value * 100;
-      });
-      
-      // Update crosshair on color change
-      colorOptions.forEach(option => {
-        option.addEventListener('click', function() {
-          colorOptions.forEach(opt => opt.classList.remove('active'));
-          this.classList.add('active');
-          
-          const color = this.getAttribute('data-color');
-          crosshairElement.style.color = color;
-        });
-      });
-    });
-  </script>
 </body>
 </html>
