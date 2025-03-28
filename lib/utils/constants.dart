@@ -21,6 +21,21 @@ class Constants {
   /// The application description
   static const String appDescription = 'A desktop application for creating, customizing, and exporting gaming crosshairs.';
   
+  /// The window title
+  static const String windowTitle = appName;
+  
+  /// The default window width
+  static const double windowDefaultWidth = 1280.0;
+  
+  /// The default window height
+  static const double windowDefaultHeight = 720.0;
+  
+  /// The minimum window width
+  static const double windowMinWidth = 800.0;
+  
+  /// The minimum window height
+  static const double windowMinHeight = 600.0;
+  
   /// The minimum slider value for size
   static const double minSize = 5.0;
   

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crosshair Studio</title>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --bg-lighter: #202020;
+      --primary: #FF9800;
+      --text-color: #FFFFFF;
+      --text-secondary: #AAAAAA;
+      --nav-width: 80px;
+      --divider-color: #333333;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    
+    .nav {
+      width: var(--nav-width);
+      background-color: #101010;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 20px;
+    }
+    
+    .nav-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: color 0.3s;
+    }
+    
+    .nav-item.active {
+      color: var(--primary);
+    }
+    
+    .nav-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .nav-icon {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    
+    .nav-label {
+      font-size: 12px;
+    }
+    
+    .divider {
+      width: 1px;
+      background-color: var(--divider-color);
+    }
+    
+    .content {
+      flex: 1;
+      background-color: var(--bg-lighter);
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .header {
+      padding: 16px;
+      background-color: #101010;
+      display: flex;
+      align-items: center;
+    }
+    
+    .header h1 {
+      flex: 1;
+    }
+    
+    .page {
+      display: none;
+      padding: 20px;
+      height: 100%;
+    }
+    
+    .page.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .welcome-icon {
+      font-size: 100px;
+      color: var(--primary);
+      margin-bottom: 24px;
+    }
+    
+    .welcome-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .welcome-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    
+    .btn {
+      background-color: var(--primary);
+      color: black;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .btn:hover {
+      background-color: #FFB74D;
+    }
+    
+    .crosshair-preview {
+      width: 200px;
+      height: 200px;
+      background-color: rgba(0, 0, 0, 0.5);
+      position: relative;
+      margin-bottom: 32px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .crosshair {
+      color: var(--primary);
+      font-size: 32px;
+    }
+    
+    .settings-section {
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 24px;
+    }
+    
+    .settings-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+    
+    .settings-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .settings-label {
+      flex: 1;
+    }
+    
+    .settings-control {
+      flex: 2;
+    }
+    
+    .slider {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 4px;
+      background: #333;
+      outline: none;
+      border-radius: 2px;
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .color-picker {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .color-option {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    
+    .color-option.active {
+      border-color: white;
+    }
+    
+    .profiles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 800px;
+    }
+    
+    .profile-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .profile-card:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .profile-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .profile-game {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    
+    .profile-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 4px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-item active" data-page="home">
+      <span class="material-icons nav-icon">home</span>
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item" data-page="crosshair">
+      <span class="material-icons nav-icon">gps_fixed</span>
+      <span class="nav-label">Crosshair</span>
+    </div>
+    <div class="nav-item" data-page="profiles">
+      <span class="material-icons nav-icon">person</span>
+      <span class="nav-label">Profiles</span>
+    </div>
+    <div class="nav-item" data-page="settings">
+      <span class="material-icons nav-icon">settings</span>
+      <span class="nav-label">Settings</span>
+    </div>
+    <div class="nav-item" data-page="about">
+      <span class="material-icons nav-icon">info</span>
+      <span class="nav-label">About</span>
+    </div>
+  </div>
+  
+  <div class="divider"></div>
+  
+  <div class="content">
+    <div class="header">
+      <h1>Crosshair Studio</h1>
+    </div>
+    
+    <div class="page active" id="home">
+      <span class="material-icons welcome-icon">gps_fixed</span>
+      <h2 class="welcome-title">Welcome to Crosshair Studio</h2>
+      <p class="welcome-subtitle">Create, customize and export gaming crosshairs<br>for your favorite games</p>
+      <button class="btn" id="create-crosshair">Create New Crosshair</button>
+    </div>
+    
+    <div class="page" id="crosshair">
+      <div class="crosshair-preview">
+        <span class="material-icons crosshair">add</span>
+      </div>
+      
+      <div class="settings-section">
+        <h3 class="settings-title">Crosshair Style</h3>
+        <div class="settings-row">
+          <label class="settings-label">Shape</label>
+          <div class="settings-control">
+            <select id="shape-select" class="shape-select">
+              <option value="add">Plus</option>
+              <option value="add_circle">Circle</option>
+              <option value="clear_all">X</option>
+              <option value="expand_less">Triangle</option>
+              <option value="adjust">Dot</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="settings-row">
+          <label class="settings-label">Size</label>
+          <div class="settings-control">
+            <input type="range" min="16" max="64" value="32" class="slider" id="size-slider">
+          </div>
+        </div>
+        
+        <div class="settings-row">
+          <label class="settings-label">Thickness</label>
+          <div class="settings-control">
+            <input type="range" min="1" max="5" value="2" class="slider" id="thickness-slider">
+          </div>
+        </div>
+        
+        <div class="settings-row">
+          <label class="settings-label">Color</label>
+          <div class="settings-control">
+            <div class="color-picker">
+              <div class="color-option active" style="background-color: #FF9800;" data-color="#FF9800"></div>
+              <div class="color-option" style="background-color: #4CAF50;" data-color="#4CAF50"></div>
+              <div class="color-option" style="background-color: #2196F3;" data-color="#2196F3"></div>
+              <div class="color-option" style="background-color: #E91E63;" data-color="#E91E63"></div>
+              <div class="color-option" style="background-color: #FFFFFF;" data-color="#FFFFFF"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn">Save Crosshair</button>
+    </div>
+    
+    <div class="page" id="profiles">
+      <div class="profiles-grid">
+        <div class="profile-card">
+          <div class="profile-title">Default Profile</div>
+          <div class="profile-game">All Games</div>
+          <div class="profile-preview">
+            <span class="material-icons" style="color: #FF9800;">add</span>
+          </div>
+        </div>
+        
+        <div class="profile-card">
+          <div class="profile-title">CS2 Profile</div>
+          <div class="profile-game">Counter-Strike 2</div>
+          <div class="profile-preview">
+            <span class="material-icons" style="color: #4CAF50;">add</span>
+          </div>
+        </div>
+        
+        <div class="profile-card">
+          <div class="profile-title">Valorant Profile</div>
+          <div class="profile-game">Valorant</div>
+          <div class="profile-preview">
+            <span class="material-icons" style="color: #E91E63;">add_circle</span>
+          </div>
+        </div>
+        
+        <div class="profile-card">
+          <div class="profile-title">Precision Profile</div>
+          <div class="profile-game">Apex Legends</div>
+          <div class="profile-preview">
+            <span class="material-icons" style="color: #2196F3;">adjust</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="page" id="settings">
+      <div class="settings-section">
+        <h3 class="settings-title">Application Settings</h3>
+        
+        <div class="settings-row">
+          <label class="settings-label">Application Theme</label>
+          <div class="settings-control">
+            <select>
+              <option>Dark (Default)</option>
+              <option>Light</option>
+              <option>System</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="settings-row">
+          <label class="settings-label">Auto Save</label>
+          <div class="settings-control">
+            <select>
+              <option>Enabled</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="settings-row">
+          <label class="settings-label">Export Format</label>
+          <div class="settings-control">
+            <select>
+              <option>CSV</option>
+              <option>JSON</option>
+              <option>XML</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h3 class="settings-title">Performance Settings</h3>
+        
+        <div class="settings-row">
+          <label class="settings-label">Smooth Animation</label>
+          <div class="settings-control">
+            <select>
+              <option>Enabled</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="settings-row">
+          <label class="settings-label">Background Effects</label>
+          <div class="settings-control">
+            <select>
+              <option>Enabled</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="page" id="about">
+      <span class="material-icons welcome-icon">info</span>
+      <h2 class="welcome-title">About Crosshair Studio</h2>
+      <p class="welcome-subtitle">Version 1.0.0<br>Created with Flutter & C++</p>
+      
+      <div style="text-align: center; margin-top: 24px; max-width: 600px;">
+        <p style="margin-bottom: 16px;">
+          Crosshair Studio is a desktop application for creating, customizing and exporting gaming crosshairs.
+          It provides an intuitive interface to design your perfect crosshair for any game.
+        </p>
+        <p style="margin-bottom: 16px;">
+          Features include:
+        </p>
+        <ul style="list-style: none; margin-bottom: 24px;">
+          <li>✓ Multiple crosshair styles and shapes</li>
+          <li>✓ Complete color customization</li>
+          <li>✓ Size and thickness adjustments</li>
+          <li>✓ Profile management for different games</li>
+          <li>✓ CSV export for sharing configurations</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Navigation
+      const navItems = document.querySelectorAll('.nav-item');
+      const pages = document.querySelectorAll('.page');
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function() {
+          const targetPage = this.getAttribute('data-page');
+          
+          // Update active nav item
+          navItems.forEach(navItem => navItem.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show target page
+          pages.forEach(page => page.classList.remove('active'));
+          document.getElementById(targetPage).classList.add('active');
+        });
+      });
+      
+      // Create crosshair button
+      const createCrosshairButton = document.getElementById('create-crosshair');
+      createCrosshairButton.addEventListener('click', function() {
+        navItems.forEach(navItem => navItem.classList.remove('active'));
+        document.querySelector('[data-page="crosshair"]').classList.add('active');
+        
+        pages.forEach(page => page.classList.remove('active'));
+        document.getElementById('crosshair').classList.add('active');
+      });
+      
+      // Crosshair customization
+      const shapeSelect = document.getElementById('shape-select');
+      const sizeSlider = document.getElementById('size-slider');
+      const thicknessSlider = document.getElementById('thickness-slider');
+      const colorOptions = document.querySelectorAll('.color-option');
+      const crosshairElement = document.querySelector('.crosshair');
+      
+      // Update crosshair on shape change
+      shapeSelect.addEventListener('change', function() {
+        crosshairElement.textContent = this.value;
+      });
+      
+      // Update crosshair on size change
+      sizeSlider.addEventListener('input', function() {
+        crosshairElement.style.fontSize = this.value + 'px';
+      });
+      
+      // Update crosshair on thickness change
+      thicknessSlider.addEventListener('input', function() {
+        const value = this.value;
+        crosshairElement.style.fontWeight = value * 100;
+      });
+      
+      // Update crosshair on color change
+      colorOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          colorOptions.forEach(opt => opt.classList.remove('active'));
+          this.classList.add('active');
+          
+          const color = this.getAttribute('data-color');
+          crosshairElement.style.color = color;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

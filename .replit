@@ -1,4 +1,4 @@
-modules = ["flutter", "dart", "flutter-latest"]
+modules = ["flutter", "dart", "flutter-latest", "nodejs-20", "flutter:3.22.0"]
 
 [nix]
 channel = "stable-24_05"
@@ -13,10 +13,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Flutter App"
+args = "Crosshair App"
 
 [[workflows.workflow]]
-name = "Flutter App"
+name = "Crosshair App"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -27,7 +27,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flutter run -d web-server --web-port 5000 --web-hostname 0.0.0.0"
+args = "node server.js"
 waitForPort = 5000
 
 [deployment]

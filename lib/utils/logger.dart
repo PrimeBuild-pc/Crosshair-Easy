@@ -6,7 +6,7 @@ class Logger {
   }
   
   /// Log an info message
-  static void info(String message) {
+  static Future<void> info(String message) async {
     _log('INFO', message);
   }
   
@@ -16,8 +16,12 @@ class Logger {
   }
   
   /// Log an error message
-  static void error(String message) {
-    _log('ERROR', message);
+  static Future<void> error(String message, [dynamic exception]) async {
+    if (exception != null) {
+      _log('ERROR', '$message: $exception');
+    } else {
+      _log('ERROR', message);
+    }
   }
   
   /// Log a message with the given level

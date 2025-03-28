@@ -1,454 +1,608 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../models/crosshair_model.dart';
+import '../models/profile_model.dart';
+import '../services/profile_service.dart';
 import '../services/crosshair_service.dart';
 import '../services/export_service.dart';
-import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/constants.dart';
 import '../widgets/crosshair_preview.dart';
 
-/// Screen for exporting crosshairs
+/// The export screen
 class ExportScreen extends StatefulWidget {
-  /// The crosshair to export
-  final CrosshairModel crosshair;
-  
   /// Create a new export screen
-  const ExportScreen({
-    Key? key,
-    required this.crosshair,
-  }) : super(key: key);
+  const ExportScreen({Key? key}) : super(key: key);
 
   @override
   State<ExportScreen> createState() => _ExportScreenState();
 }
 
 class _ExportScreenState extends State<ExportScreen> {
-  int _exportSize = 128;
-  bool _showDarkBackground = true;
-  bool _showLightBackground = false;
-  bool _showTransparentBackground = false;
-  bool _isExporting = false;
-  String? _errorMessage;
-  String? _successMessage;
+  /// The selected profile
+  ProfileModel? _selectedProfile;
   
-  Future<void> _exportAsPng() async {
-    setState(() {
-      _isExporting = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    
-    try {
-      final crosshairService = Provider.of<CrosshairService>(context, listen: false);
-      
-      final imageData = await crosshairService.renderCrosshair(
-        widget.crosshair,
-        width: _exportSize,
-        height: _exportSize,
-      );
-      
-      final fileName = await ExportService.exportCrosshairAsPng(
-        imageData,
-        '${widget.crosshair.name}_${_exportSize}x${_exportSize}',
-      );
-      
-      setState(() {
-        _successMessage = 'Crosshair exported successfully: $fileName';
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to export crosshair: $e';
-      });
-    } finally {
-      setState(() {
-        _isExporting = false;
-      });
-    }
-  }
+  /// Whether all profiles are selected
+  bool _allProfilesSelected = false;
   
-  Future<void> _exportProfileAsCsv() async {
-    setState(() {
-      _isExporting = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    
-    try {
-      final profileService = Provider.of<ProfileService>(context, listen: false);
-      final profile = profileService.selectedProfile;
-      
-      if (profile == null) {
-        throw 'No profile selected';
-      }
-      
-      final fileName = await ExportService.exportProfileAsCsv(profile);
-      
-      setState(() {
-        _successMessage = 'Profile exported as CSV: $fileName';
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to export profile: $e';
-      });
-    } finally {
-      setState(() {
-        _isExporting = false;
-      });
-    }
-  }
+  /// The export format
+  String _exportFormat = 'CSV';
   
-  Future<void> _exportProfileAsJson() async {
-    setState(() {
-      _isExporting = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    
-    try {
-      final profileService = Provider.of<ProfileService>(context, listen: false);
-      final profile = profileService.selectedProfile;
-      
-      if (profile == null) {
-        throw 'No profile selected';
-      }
-      
-      final fileName = await ExportService.exportProfileAsJson(profile);
-      
-      setState(() {
-        _successMessage = 'Profile exported as JSON: $fileName';
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to export profile: $e';
-      });
-    } finally {
-      setState(() {
-        _isExporting = false;
-      });
-    }
-  }
+  /// Whether the export is in progress
+  bool _exporting = false;
   
-  void _toggleBackgroundType(String type) {
-    setState(() {
-      switch (type) {
-        case 'dark':
-          _showDarkBackground = true;
-          _showLightBackground = false;
-          _showTransparentBackground = false;
-          break;
-        case 'light':
-          _showDarkBackground = false;
-          _showLightBackground = true;
-          _showTransparentBackground = false;
-          break;
-        case 'transparent':
-          _showDarkBackground = false;
-          _showLightBackground = false;
-          _showTransparentBackground = true;
-          break;
-      }
-    });
-  }
+  /// The export result message
+  String? _exportResult;
+  
+  /// Whether the export was successful
+  bool _exportSuccess = false;
   
   @override
+  void initState() {
+    super.initState();
+    
+    // Load the active profile
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadActiveProfile();
+    });
+  }
+  
+  /// Load the active profile
+  void _loadActiveProfile() {
+    final profileService = Provider.of<ProfileService>(context, listen: false);
+    
+    setState(() {
+      _selectedProfile = profileService.activeProfile;
+    });
+  }
+  
+  /// Set the selected profile
+  void _setSelectedProfile(ProfileModel? profile) {
+    setState(() {
+      _selectedProfile = profile;
+      _allProfilesSelected = false;
+      _exportResult = null;
+    });
+  }
+  
+  /// Set all profiles selected
+  void _setAllProfilesSelected(bool selected) {
+    setState(() {
+      _allProfilesSelected = selected;
+      if (selected) {
+        _selectedProfile = null;
+      } else {
+        _loadActiveProfile();
+      }
+      _exportResult = null;
+    });
+  }
+  
+  /// Set the export format
+  void _setExportFormat(String format) {
+    setState(() {
+      _exportFormat = format;
+      _exportResult = null;
+    });
+  }
+  
+  /// Export the selected profile or all profiles
+  Future<void> _export() async {
+    if (_allProfilesSelected == false && _selectedProfile == null) {
+      _showError('Please select a profile or all profiles.');
+      return;
+    }
+    
+    final profileService = Provider.of<ProfileService>(context, listen: false);
+    final crosshairService = Provider.of<CrosshairService>(context, listen: false);
+    
+    setState(() {
+      _exporting = true;
+      _exportResult = null;
+    });
+    
+    try {
+      String filePath;
+      
+      if (_allProfilesSelected) {
+        filePath = await ExportService.exportAllProfilesAsCsv(
+          profileService.profiles,
+          crosshairService.crosshairs,
+        );
+        
+        setState(() {
+          _exportResult = 'All profiles exported to $filePath';
+          _exportSuccess = true;
+        });
+      } else if (_selectedProfile != null) {
+        filePath = await ExportService.exportProfileAsCsv(
+          _selectedProfile!,
+          crosshairService.crosshairs,
+        );
+        
+        setState(() {
+          _exportResult = 'Profile "${_selectedProfile!.name}" exported to $filePath';
+          _exportSuccess = true;
+        });
+      }
+    } catch (e) {
+      _showError('Export failed: $e');
+    } finally {
+      setState(() {
+        _exporting = false;
+      });
+    }
+  }
+  
+  /// Copy to clipboard
+  Future<void> _copyToClipboard() async {
+    if (_allProfilesSelected == false && _selectedProfile == null) {
+      _showError('Please select a profile or all profiles.');
+      return;
+    }
+    
+    final profileService = Provider.of<ProfileService>(context, listen: false);
+    final crosshairService = Provider.of<CrosshairService>(context, listen: false);
+    
+    setState(() {
+      _exporting = true;
+      _exportResult = null;
+    });
+    
+    try {
+      if (_allProfilesSelected) {
+        final buffer = StringBuffer();
+        buffer.writeln(ProfileModel.csvHeader());
+        
+        for (final profile in profileService.profiles) {
+          buffer.write(profile.toCsv(crosshairService.crosshairs));
+          buffer.writeln();
+        }
+        
+        await ExportService.copyToClipboard(buffer.toString());
+        
+        setState(() {
+          _exportResult = 'All profiles copied to clipboard';
+          _exportSuccess = true;
+        });
+      } else if (_selectedProfile != null) {
+        final buffer = StringBuffer();
+        buffer.writeln(ProfileModel.csvHeader());
+        buffer.write(_selectedProfile!.toCsv(crosshairService.crosshairs));
+        
+        await ExportService.copyToClipboard(buffer.toString());
+        
+        setState(() {
+          _exportResult = 'Profile "${_selectedProfile!.name}" copied to clipboard';
+          _exportSuccess = true;
+        });
+      }
+    } catch (e) {
+      _showError('Copy to clipboard failed: $e');
+    } finally {
+      setState(() {
+        _exporting = false;
+      });
+    }
+  }
+  
+  /// Show an error message
+  void _showError(String message) {
+    setState(() {
+      _exportResult = message;
+      _exportSuccess = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final crosshairService = Provider.of<CrosshairService>(context);
     final profileService = Provider.of<ProfileService>(context);
+    final crosshairService = Provider.of<CrosshairService>(context);
+    
+    final profiles = profileService.profiles;
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Export Crosshair'),
+        title: const Text('Export'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: Row(
+        children: [
+          // Left panel
+          Container(
+            width: 300,
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(
+                right: BorderSide(
+                  color: Colors.grey[800]!,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Left panel: Crosshair preview
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    children: [
-                      Text(
-                        'Preview',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      CrosshairPreview(
-                        crosshair: widget.crosshair,
-                        crosshairService: crosshairService,
-                        width: 300,
-                        height: 300,
-                        showDarkBackground: _showDarkBackground,
-                        showLightBackground: _showLightBackground,
-                        showTransparentBackground: _showTransparentBackground,
-                      ),
-                      const SizedBox(height: 16),
-                      // Background selector
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildBackgroundSelector(
-                            'Dark',
-                            _showDarkBackground,
-                            () => _toggleBackgroundType('dark'),
-                            Colors.black,
-                          ),
-                          const SizedBox(width: 16),
-                          _buildBackgroundSelector(
-                            'Light',
-                            _showLightBackground,
-                            () => _toggleBackgroundType('light'),
-                            Colors.white,
-                          ),
-                          const SizedBox(width: 16),
-                          _buildBackgroundSelector(
-                            'Transparent',
-                            _showTransparentBackground,
-                            () => _toggleBackgroundType('transparent'),
-                            null,
-                          ),
-                        ],
-                      ),
-                    ],
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(Constants.padding),
+                  color: AppTheme.background,
+                  child: const Text(
+                    'Export Options',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
                 
-                const SizedBox(width: 32),
-                
-                // Right panel: Export options
-                Expanded(
-                  flex: 1,
+                // All profiles option
+                Padding(
+                  padding: const EdgeInsets.all(Constants.padding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Export Options',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      const Text(
+                        'Select what to export:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      // Image size selector
-                      Text(
-                        'Image Size',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      const SizedBox(height: Constants.paddingSmall),
+                      SwitchListTile(
+                        title: const Text('All Profiles'),
+                        value: _allProfilesSelected,
+                        onChanged: _setAllProfilesSelected,
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: AppTheme.primary,
                       ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [32, 64, 128, 256, 512].map((size) {
-                          final isSelected = _exportSize == size;
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                _exportSize = size;
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppTheme.primaryColor
-                                    : AppTheme.surfaceColor,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppTheme.primaryColor
-                                      : Colors.grey,
-                                ),
-                              ),
+                      const Divider(),
+                      
+                      // Profile selection
+                      if (!_allProfilesSelected) ...[
+                        const Text(
+                          'Or select a specific profile:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: Constants.paddingSmall),
+                        DropdownButtonFormField<String?>(
+                          decoration: const InputDecoration(
+                            labelText: 'Profile',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: _selectedProfile?.id,
+                          items: profiles.map((profile) {
+                            return DropdownMenuItem<String?>(
+                              value: profile.id,
                               child: Text(
-                                '${size}px',
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.grey,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
+                                profile.name,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          );
-                        }).toList(),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              final profile = profileService.getProfileById(value);
+                              if (profile != null) {
+                                _setSelectedProfile(profile);
+                              }
+                            }
+                          },
+                        ),
+                        const Divider(),
+                      ],
+                      
+                      // Export format
+                      const Text(
+                        'Export format:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: Constants.paddingSmall),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Format',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: _exportFormat,
+                        items: const [
+                          DropdownMenuItem<String>(
+                            value: 'CSV',
+                            child: Text('CSV'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            _setExportFormat(value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: Constants.padding),
+                      
                       // Export buttons
-                      Text(
-                        'Export Format',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      // Crosshair as PNG
-                      ElevatedButton.icon(
-                        onPressed: _isExporting ? null : _exportAsPng,
-                        icon: const Icon(Icons.image),
-                        label: const Text('Export Crosshair as PNG'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Profile as CSV
-                      ElevatedButton.icon(
-                        onPressed: _isExporting ? null : _exportProfileAsCsv,
-                        icon: const Icon(Icons.table_chart),
-                        label: const Text('Export ${profileService.selectedProfile?.name ?? 'Profile'} as CSV'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Profile as JSON
-                      ElevatedButton.icon(
-                        onPressed: _isExporting ? null : _exportProfileAsJson,
-                        icon: const Icon(Icons.code),
-                        label: const Text('Export ${profileService.selectedProfile?.name ?? 'Profile'} as JSON'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_isExporting)
-                        const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      if (_errorMessage != null)
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.red,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.save),
+                              label: const Text('Export'),
+                              onPressed: _exporting ? null : _export,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.error,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (_successMessage != null)
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.green,
+                          const SizedBox(width: Constants.paddingSmall),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.copy),
+                              label: const Text('Copy'),
+                              onPressed: _exporting ? null : _copyToClipboard,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _successMessage!,
-                                  style: const TextStyle(
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ],
+                      ),
+                      
+                      // Export result
+                      if (_exportResult != null) ...[
+                        const SizedBox(height: Constants.padding),
+                        Container(
+                          padding: const EdgeInsets.all(Constants.paddingSmall),
+                          decoration: BoxDecoration(
+                            color: _exportSuccess
+                                ? Colors.green.withOpacity(0.2)
+                                : Colors.red.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(Constants.borderRadiusSmall),
+                          ),
+                          child: Text(
+                            _exportResult!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _exportSuccess ? Colors.green[300] : Colors.red[300],
+                            ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          
+          // Right panel - Preview
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.backgroundGradientStart,
+                    AppTheme.backgroundGradientEnd,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: _buildPreview(
+                profileService,
+                crosshairService,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
   
-  Widget _buildBackgroundSelector(
-    String label,
-    bool isSelected,
-    VoidCallback onTap,
-    Color? color,
+  /// Build the preview
+  Widget _buildPreview(
+    ProfileService profileService,
+    CrosshairService crosshairService,
   ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.primaryColor.withOpacity(0.2)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected
-                ? AppTheme.primaryColor
-                : Colors.grey,
+    if (_exporting) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    
+    if (_allProfilesSelected) {
+      final profiles = profileService.profiles;
+      
+      if (profiles.isEmpty) {
+        return const Center(
+          child: Text('No profiles to export'),
+        );
+      }
+      
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(Constants.padding),
+            child: Text(
+              'Exporting ${profiles.length} profiles',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: color,
-                border: Border.all(
-                  color: Colors.grey,
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(Constants.padding),
+              itemCount: profiles.length,
+              itemBuilder: (context, index) {
+                final profile = profiles[index];
+                final crosshairs = crosshairService.crosshairs
+                    .where((c) => profile.crosshairIds.contains(c.id))
+                    .toList();
+                
+                return Card(
+                  margin: const EdgeInsets.only(bottom: Constants.padding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        title: Text(profile.name),
+                        subtitle: Text(
+                          '${crosshairs.length} crosshairs',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      if (crosshairs.isNotEmpty)
+                        Container(
+                          height: 120,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Constants.padding,
+                            vertical: Constants.paddingSmall,
+                          ),
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: crosshairs.length,
+                            itemBuilder: (context, index) {
+                              final crosshair = crosshairs[index];
+                              
+                              return Container(
+                                width: 100,
+                                margin: const EdgeInsets.only(right: Constants.paddingSmall),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[900],
+                                  borderRadius: BorderRadius.circular(Constants.borderRadiusSmall),
+                                  border: Border.all(
+                                    color: Colors.grey[800]!,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: CrosshairPreview(
+                                        crosshair: crosshair,
+                                        showInfo: false,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[800],
+                                        borderRadius: const BorderRadius.only(
+                                          bottomLeft: Radius.circular(Constants.borderRadiusSmall - 1),
+                                          bottomRight: Radius.circular(Constants.borderRadiusSmall - 1),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        crosshair.name,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    }
+    
+    if (_selectedProfile != null) {
+      final crosshairs = crosshairService.crosshairs
+          .where((c) => _selectedProfile!.crosshairIds.contains(c.id))
+          .toList();
+      
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(Constants.padding),
+            child: Text(
+              'Exporting profile "${_selectedProfile!.name}"',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          if (crosshairs.isEmpty)
+            const Expanded(
+              child: Center(
+                child: Text('No crosshairs in this profile'),
+              ),
+            )
+          else
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(Constants.padding),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 1,
+                  crossAxisSpacing: Constants.padding,
+                  mainAxisSpacing: Constants.padding,
                 ),
-                borderRadius: BorderRadius.circular(4),
-                image: color == null
-                    ? const DecorationImage(
-                        image: AssetImage('assets/transparent_bg.svg'),
-                        repeat: ImageRepeat.repeat,
-                      )
-                    : null,
+                itemCount: crosshairs.length,
+                itemBuilder: (context, index) {
+                  final crosshair = crosshairs[index];
+                  
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(Constants.borderRadius),
+                      border: Border.all(
+                        color: Colors.grey[800]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: CrosshairPreview(
+                            crosshair: crosshair,
+                            showInfo: false,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(Constants.paddingSmall),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[800],
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(Constants.borderRadius - 1),
+                              bottomRight: Radius.circular(Constants.borderRadius - 1),
+                            ),
+                          ),
+                          child: Text(
+                            crosshair.name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? AppTheme.primaryColor
-                    : null,
-                fontWeight: isSelected
-                    ? FontWeight.bold
-                    : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
+        ],
+      );
+    }
+    
+    return const Center(
+      child: Text('Select a profile or all profiles to export'),
     );
   }
 }
