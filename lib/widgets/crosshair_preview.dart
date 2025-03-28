@@ -1,52 +1,51 @@
-import 'dart:async';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-
+import 'dart:math' as math;
 import '../models/crosshair_model.dart';
-import '../theme/app_theme.dart';
-import '../utils/ffi_bridge.dart';
+import '../utils/constants.dart';
 
-/// Widget for displaying a crosshair preview
+/// A crosshair preview
 class CrosshairPreview extends StatefulWidget {
-  /// Crosshair model to preview
-  final CrosshairModel crosshair;
+  /// The crosshair model
+  final CrosshairModel? crosshair;
   
-  /// Background type ('Dark', 'Light', 'Gray', 'White', 'Transparent')
-  final String backgroundType;
+  /// The background image
+  final String? backgroundImage;
   
-  /// Size of the preview widget
-  final double size;
-  
-  /// Show grid lines in the background
+  /// Whether to show the grid
   final bool showGrid;
   
-  /// Constructor
+  /// Whether to show the info
+  final bool showInfo;
+  
+  /// Whether the preview is interactive
+  final bool interactive;
+  
+  /// Create a new crosshair preview
   const CrosshairPreview({
     Key? key,
-    required this.crosshair,
-    this.backgroundType = 'Dark',
-    this.size = 200,
+    this.crosshair,
+    this.backgroundImage,
     this.showGrid = false,
+    this.showInfo = false,
+    this.interactive = false,
   }) : super(key: key);
 
   @override
-  _CrosshairPreviewState createState() => _CrosshairPreviewState();
+  State<CrosshairPreview> createState() => _CrosshairPreviewState();
 }
 
 class _CrosshairPreviewState extends State<CrosshairPreview> with SingleTickerProviderStateMixin {
-  ui.Image? _crosshairImage;
-  bool _isLoading = true;
+  /// The animation controller for animations
   AnimationController? _animationController;
-  Timer? _animationTrigger;
   
+  /// The current animation value
+  double _animationValue = 1.0;
+
   @override
   void initState() {
     super.initState();
-    _renderCrosshair();
     
-    if (widget.crosshair.animated) {
+    if (widget.crosshair?.enableAnimation ?? false) {
       _setupAnimation();
     }
   }
@@ -55,310 +54,436 @@ class _CrosshairPreviewState extends State<CrosshairPreview> with SingleTickerPr
   void didUpdateWidget(CrosshairPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Re-render if crosshair properties changed
-    if (widget.crosshair != oldWidget.crosshair ||
-        widget.backgroundType != oldWidget.backgroundType ||
-        widget.size != oldWidget.size) {
-      _renderCrosshair();
-    }
-    
-    // Update animation state if needed
-    if (widget.crosshair.animated != oldWidget.crosshair.animated ||
-        widget.crosshair.animationType != oldWidget.crosshair.animationType ||
-        widget.crosshair.animationSpeed != oldWidget.crosshair.animationSpeed) {
-      _updateAnimation();
-    }
-  }
-  
-  @override
-  void dispose() {
-    _animationController?.dispose();
-    _animationTrigger?.cancel();
-    super.dispose();
-  }
-  
-  // Setup animation controller
-  void _setupAnimation() {
-    _animationController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: (1000 / widget.crosshair.animationSpeed).round()),
-    );
-    
-    _animationController!.repeat(reverse: true);
-    
-    // For types of animations that need to be re-triggered
-    if (widget.crosshair.animationType == 'Pulse' ||
-        widget.crosshair.animationType == 'Expand') {
-      _setupAnimationTrigger();
-    }
-  }
-  
-  // Setup a trigger for animations that should fire periodically
-  void _setupAnimationTrigger() {
-    _animationTrigger?.cancel();
-    
-    _animationTrigger = Timer.periodic(
-      Duration(seconds: 3), 
-      (_) {
-        if (_animationController != null) {
-          _animationController!.reset();
-          _animationController!.repeat(reverse: true);
-        }
-      },
-    );
-  }
-  
-  // Update animation when properties change
-  void _updateAnimation() {
-    _animationController?.dispose();
-    _animationController = null;
-    _animationTrigger?.cancel();
-    
-    if (widget.crosshair.animated) {
+    if ((widget.crosshair?.enableAnimation ?? false) != (oldWidget.crosshair?.enableAnimation ?? false) ||
+        widget.crosshair?.animationType != oldWidget.crosshair?.animationType ||
+        widget.crosshair?.animationSpeed != oldWidget.crosshair?.animationSpeed) {
       _setupAnimation();
     }
   }
+
+  @override
+  void dispose() {
+    _animationController?.dispose();
+    super.dispose();
+  }
   
-  // Render the crosshair
-  Future<void> _renderCrosshair() async {
-    setState(() {
-      _isLoading = true;
-    });
+  /// Setup the animation
+  void _setupAnimation() {
+    _animationController?.dispose();
     
-    try {
-      final renderedData = await FFIBridge.renderCrosshair(
-        shape: widget.crosshair.shape,
-        size: widget.crosshair.size.toInt(),
-        thickness: widget.crosshair.thickness.toInt(),
-        gap: widget.crosshair.gap.toInt(),
-        opacity: (widget.crosshair.opacity * 255).toInt(),
-        centerDotSize: widget.crosshair.centerDotSize.toInt(),
-        outline: widget.crosshair.outline,
-        outlineThickness: widget.crosshair.outlineThickness.toInt(),
-        color: widget.crosshair.color.value,
-        outlineColor: widget.crosshair.outlineColor.value,
-        backgroundColor: _getBackgroundColor().value,
-        width: widget.size.toInt(),
-        height: widget.size.toInt(),
+    if (widget.crosshair?.enableAnimation ?? false) {
+      final speed = widget.crosshair!.animationSpeed;
+      final duration = Duration(milliseconds: (1000 / speed).round());
+      
+      _animationController = AnimationController(
+        duration: duration,
+        vsync: this,
       );
       
-      final codec = await ui.instantiateImageCodec(renderedData);
-      final frame = await codec.getNextFrame();
+      switch (widget.crosshair!.animationType) {
+        case AnimationType.breathing:
+          _animationController!.addListener(() {
+            setState(() {
+              _animationValue = 0.7 + 0.3 * _animationController!.value;
+            });
+          });
+          break;
+        case AnimationType.pulse:
+          _animationController!.addListener(() {
+            setState(() {
+              _animationValue = 0.5 + 0.5 * math.sin(_animationController!.value * math.pi * 2);
+            });
+          });
+          break;
+        case AnimationType.blink:
+          _animationController!.addStatusListener((status) {
+            setState(() {
+              _animationValue = status == AnimationStatus.forward ? 1.0 : 0.3;
+            });
+          });
+          break;
+        case AnimationType.none:
+          setState(() {
+            _animationValue = 1.0;
+          });
+          break;
+      }
       
+      _animationController!.repeat(reverse: widget.crosshair!.animationType == AnimationType.breathing);
+    } else {
       setState(() {
-        _crosshairImage = frame.image;
-        _isLoading = false;
+        _animationValue = 1.0;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      print('Error rendering crosshair: $e');
     }
   }
-  
-  // Get the background color based on the selected type
-  Color _getBackgroundColor() {
-    switch (widget.backgroundType) {
-      case 'White':
-        return Colors.white;
-      case 'Gray':
-        return Colors.grey.shade700;
-      case 'Light':
-        return Colors.grey.shade300;
-      case 'Transparent':
-        return Colors.transparent;
-      case 'Dark':
-      default:
-        return Colors.black87;
-    }
-  }
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: widget.size,
-      height: widget.size,
+      width: Constants.previewBackgroundSize,
+      height: Constants.previewBackgroundSize,
       decoration: BoxDecoration(
-        color: _getBackgroundColor(),
+        color: Colors.grey[900],
+        image: widget.backgroundImage != null
+            ? DecorationImage(
+                image: AssetImage(widget.backgroundImage!),
+                fit: BoxFit.cover,
+              )
+            : null,
+        borderRadius: BorderRadius.circular(Constants.borderRadius),
         border: Border.all(
-          color: AppTheme.dividerColor,
+          color: Colors.grey[800]!,
           width: 1,
         ),
       ),
       child: Stack(
         children: [
-          // Grid background if enabled
           if (widget.showGrid)
-            CustomPaint(
-              size: Size(widget.size, widget.size),
-              painter: GridPainter(
-                gridSize: 10,
-                lineColor: AppTheme.dividerColor.withOpacity(0.5),
+            _buildGrid(),
+          if (widget.crosshair != null)
+            Center(
+              child: CustomPaint(
+                size: const Size(Constants.previewBackgroundSize, Constants.previewBackgroundSize),
+                painter: CrosshairPainter(
+                  crosshair: widget.crosshair!,
+                  animationValue: _animationValue,
+                ),
               ),
             ),
-          
-          // Crosshair image or loading indicator
-          if (_isLoading)
-            Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+          if (widget.showInfo && widget.crosshair != null)
+            Positioned(
+              bottom: Constants.paddingSmall,
+              left: Constants.paddingSmall,
+              right: Constants.paddingSmall,
+              child: Container(
+                padding: const EdgeInsets.all(Constants.paddingSmall),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(Constants.borderRadiusSmall),
                 ),
-              ),
-            )
-          else if (_crosshairImage != null)
-            widget.crosshair.animated && _animationController != null
-              ? AnimatedBuilder(
-                  animation: _animationController!,
-                  builder: (context, child) {
-                    return _buildAnimatedCrosshair();
-                  },
-                )
-              : Center(
-                  child: RawImage(
-                    image: _crosshairImage,
-                    width: widget.size,
-                    height: widget.size,
-                    fit: BoxFit.contain,
+                child: Text(
+                  '${widget.crosshair!.name} (${widget.crosshair!.shape.toString().split('.').last})',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
                   ),
                 ),
+              ),
+            ),
         ],
       ),
     );
   }
   
-  // Build an animated version of the crosshair
-  Widget _buildAnimatedCrosshair() {
-    if (_crosshairImage == null || _animationController == null) {
-      return const SizedBox.shrink();
-    }
-    
-    switch (widget.crosshair.animationType) {
-      case 'Pulse':
-        return Opacity(
-          opacity: 0.5 + (_animationController!.value * 0.5),
-          child: RawImage(
-            image: _crosshairImage,
-            width: widget.size,
-            height: widget.size,
-            fit: BoxFit.contain,
-          ),
-        );
-        
-      case 'Breathe':
-        return Opacity(
-          opacity: 0.7 + (_animationController!.value * 0.3),
-          child: RawImage(
-            image: _crosshairImage,
-            width: widget.size,
-            height: widget.size,
-            fit: BoxFit.contain,
-          ),
-        );
-        
-      case 'Expand':
-        final scale = 0.8 + (_animationController!.value * 0.4);
-        return Transform.scale(
-          scale: scale,
-          child: RawImage(
-            image: _crosshairImage,
-            width: widget.size,
-            height: widget.size,
-            fit: BoxFit.contain,
-          ),
-        );
-        
-      case 'Contract':
-        final scale = 1.2 - (_animationController!.value * 0.4);
-        return Transform.scale(
-          scale: scale,
-          child: RawImage(
-            image: _crosshairImage,
-            width: widget.size,
-            height: widget.size,
-            fit: BoxFit.contain,
-          ),
-        );
-        
-      case 'Rotate':
-        final angle = _animationController!.value * 0.2;
-        return Transform.rotate(
-          angle: angle,
-          child: RawImage(
-            image: _crosshairImage,
-            width: widget.size,
-            height: widget.size,
-            fit: BoxFit.contain,
-          ),
-        );
-        
-      default:
-        return RawImage(
-          image: _crosshairImage,
-          width: widget.size,
-          height: widget.size,
-          fit: BoxFit.contain,
-        );
-    }
+  /// Build the grid
+  Widget _buildGrid() {
+    return CustomPaint(
+      size: const Size(Constants.previewBackgroundSize, Constants.previewBackgroundSize),
+      painter: GridPainter(),
+    );
   }
 }
 
-/// Custom painter for drawing a grid
-class GridPainter extends CustomPainter {
-  final double gridSize;
-  final Color lineColor;
+/// A crosshair painter
+class CrosshairPainter extends CustomPainter {
+  /// The crosshair model
+  final CrosshairModel crosshair;
   
-  GridPainter({
-    required this.gridSize,
-    required this.lineColor,
+  /// The animation value
+  final double animationValue;
+  
+  /// Create a new crosshair painter
+  const CrosshairPainter({
+    required this.crosshair,
+    this.animationValue = 1.0,
   });
-  
+
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    
+    switch (crosshair.shape) {
+      case CrosshairShape.classic:
+        _drawClassicCrosshair(canvas, size, center);
+        break;
+      case CrosshairShape.dot:
+        _drawDotCrosshair(canvas, size, center);
+        break;
+      case CrosshairShape.cross:
+        _drawCrossCrosshair(canvas, size, center);
+        break;
+      case CrosshairShape.circle:
+        _drawCircleCrosshair(canvas, size, center);
+        break;
+      case CrosshairShape.custom:
+        _drawCustomCrosshair(canvas, size, center);
+        break;
+    }
+    
+    if (crosshair.showDot) {
+      _drawDot(canvas, center);
+    }
+  }
+  
+  /// Draw a classic crosshair
+  void _drawClassicCrosshair(Canvas canvas, Size size, Offset center) {
     final paint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 0.5;
+      ..color = crosshair.color.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = crosshair.thickness * Constants.previewCrosshairScale
+      ..style = PaintingStyle.stroke;
     
-    // Draw horizontal lines
-    for (double y = 0; y <= size.height; y += gridSize) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    final outlinePaint = Paint()
+      ..color = crosshair.outlineColor.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = (crosshair.thickness + crosshair.outlineThickness * 2) * Constants.previewCrosshairScale
+      ..style = PaintingStyle.stroke;
+    
+    final scaledSize = crosshair.size * Constants.previewCrosshairScale;
+    final scaledGap = crosshair.gap * Constants.previewCrosshairScale;
+    
+    if (crosshair.outlineThickness > 0) {
+      // Top line
+      canvas.drawLine(
+        Offset(center.dx, center.dy - scaledSize),
+        Offset(center.dx, center.dy - scaledGap),
+        outlinePaint,
+      );
+      
+      // Bottom line
+      canvas.drawLine(
+        Offset(center.dx, center.dy + scaledGap),
+        Offset(center.dx, center.dy + scaledSize),
+        outlinePaint,
+      );
+      
+      // Left line
+      canvas.drawLine(
+        Offset(center.dx - scaledSize, center.dy),
+        Offset(center.dx - scaledGap, center.dy),
+        outlinePaint,
+      );
+      
+      // Right line
+      canvas.drawLine(
+        Offset(center.dx + scaledGap, center.dy),
+        Offset(center.dx + scaledSize, center.dy),
+        outlinePaint,
+      );
     }
     
-    // Draw vertical lines
-    for (double x = 0; x <= size.width; x += gridSize) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    
-    // Draw center lines with different color/thickness
-    final centerPaint = Paint()
-      ..color = lineColor.withOpacity(0.8)
-      ..strokeWidth = 1.0;
-    
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-    
-    // Horizontal center line
+    // Top line
     canvas.drawLine(
-      Offset(0, centerY),
-      Offset(size.width, centerY),
-      centerPaint,
+      Offset(center.dx, center.dy - scaledSize),
+      Offset(center.dx, center.dy - scaledGap),
+      paint,
     );
     
-    // Vertical center line
+    // Bottom line
     canvas.drawLine(
-      Offset(centerX, 0),
-      Offset(centerX, size.height),
-      centerPaint,
+      Offset(center.dx, center.dy + scaledGap),
+      Offset(center.dx, center.dy + scaledSize),
+      paint,
+    );
+    
+    // Left line
+    canvas.drawLine(
+      Offset(center.dx - scaledSize, center.dy),
+      Offset(center.dx - scaledGap, center.dy),
+      paint,
+    );
+    
+    // Right line
+    canvas.drawLine(
+      Offset(center.dx + scaledGap, center.dy),
+      Offset(center.dx + scaledSize, center.dy),
+      paint,
     );
   }
   
+  /// Draw a dot crosshair
+  void _drawDotCrosshair(Canvas canvas, Size size, Offset center) {
+    final paint = Paint()
+      ..color = crosshair.color.withOpacity(crosshair.opacity * animationValue)
+      ..style = PaintingStyle.fill;
+    
+    final outlinePaint = Paint()
+      ..color = crosshair.outlineColor.withOpacity(crosshair.opacity * animationValue)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = crosshair.outlineThickness * Constants.previewCrosshairScale;
+    
+    final radius = crosshair.size / 4 * Constants.previewCrosshairScale;
+    
+    // Dot
+    canvas.drawCircle(center, radius, paint);
+    
+    if (crosshair.outlineThickness > 0) {
+      canvas.drawCircle(center, radius, outlinePaint);
+    }
+  }
+  
+  /// Draw a cross crosshair
+  void _drawCrossCrosshair(Canvas canvas, Size size, Offset center) {
+    final paint = Paint()
+      ..color = crosshair.color.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = crosshair.thickness * Constants.previewCrosshairScale
+      ..style = PaintingStyle.stroke;
+    
+    final outlinePaint = Paint()
+      ..color = crosshair.outlineColor.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = (crosshair.thickness + crosshair.outlineThickness * 2) * Constants.previewCrosshairScale
+      ..style = PaintingStyle.stroke;
+    
+    final scaledSize = crosshair.size * Constants.previewCrosshairScale;
+    
+    if (crosshair.outlineThickness > 0) {
+      // Top-left to bottom-right
+      canvas.drawLine(
+        Offset(center.dx - scaledSize, center.dy - scaledSize),
+        Offset(center.dx + scaledSize, center.dy + scaledSize),
+        outlinePaint,
+      );
+      
+      // Top-right to bottom-left
+      canvas.drawLine(
+        Offset(center.dx + scaledSize, center.dy - scaledSize),
+        Offset(center.dx - scaledSize, center.dy + scaledSize),
+        outlinePaint,
+      );
+    }
+    
+    // Top-left to bottom-right
+    canvas.drawLine(
+      Offset(center.dx - scaledSize, center.dy - scaledSize),
+      Offset(center.dx + scaledSize, center.dy + scaledSize),
+      paint,
+    );
+    
+    // Top-right to bottom-left
+    canvas.drawLine(
+      Offset(center.dx + scaledSize, center.dy - scaledSize),
+      Offset(center.dx - scaledSize, center.dy + scaledSize),
+      paint,
+    );
+  }
+  
+  /// Draw a circle crosshair
+  void _drawCircleCrosshair(Canvas canvas, Size size, Offset center) {
+    final paint = Paint()
+      ..color = crosshair.color.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = crosshair.thickness * Constants.previewCrosshairScale
+      ..style = PaintingStyle.stroke;
+    
+    final outlinePaint = Paint()
+      ..color = crosshair.outlineColor.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = (crosshair.thickness + crosshair.outlineThickness * 2) * Constants.previewCrosshairScale
+      ..style = PaintingStyle.stroke;
+    
+    final radius = crosshair.size * Constants.previewCrosshairScale / 2;
+    
+    if (crosshair.outlineThickness > 0) {
+      canvas.drawCircle(center, radius, outlinePaint);
+    }
+    
+    canvas.drawCircle(center, radius, paint);
+  }
+  
+  /// Draw a custom crosshair
+  void _drawCustomCrosshair(Canvas canvas, Size size, Offset center) {
+    final paint = Paint()
+      ..color = crosshair.color.withOpacity(crosshair.opacity * animationValue)
+      ..strokeWidth = crosshair.thickness * Constants.previewCrosshairScale;
+    
+    final scaledSize = crosshair.size * Constants.previewCrosshairScale;
+    
+    // Example custom crosshair (T-shaped)
+    // Top vertical line
+    canvas.drawLine(
+      Offset(center.dx, center.dy - scaledSize),
+      Offset(center.dx, center.dy),
+      paint,
+    );
+    
+    // Horizontal line
+    canvas.drawLine(
+      Offset(center.dx - scaledSize / 2, center.dy),
+      Offset(center.dx + scaledSize / 2, center.dy),
+      paint,
+    );
+  }
+  
+  /// Draw a dot
+  void _drawDot(Canvas canvas, Offset center) {
+    final paint = Paint()
+      ..color = crosshair.dotColor.withOpacity(crosshair.opacity * animationValue)
+      ..style = PaintingStyle.fill;
+    
+    final radius = crosshair.dotSize * Constants.previewCrosshairScale;
+    
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(CrosshairPainter oldDelegate) {
+    return oldDelegate.crosshair != crosshair ||
+        oldDelegate.animationValue != animationValue;
+  }
+}
+
+/// A grid painter
+class GridPainter extends CustomPainter {
+  /// Create a new grid painter
+  const GridPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey[800]!.withOpacity(0.3)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    
+    const gridSize = 20.0;
+    
+    // Draw vertical lines
+    for (double x = 0; x <= size.width; x += gridSize) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        paint,
+      );
+    }
+    
+    // Draw horizontal lines
+    for (double y = 0; y <= size.height; y += gridSize) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        paint,
+      );
+    }
+    
+    // Draw center lines
+    final centerPaint = Paint()
+      ..color = Colors.grey[600]!.withOpacity(0.5)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    
+    // Vertical center line
+    canvas.drawLine(
+      Offset(size.width / 2, 0),
+      Offset(size.width / 2, size.height),
+      centerPaint,
+    );
+    
+    // Horizontal center line
+    canvas.drawLine(
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      centerPaint,
+    );
+  }
+
   @override
   bool shouldRepaint(GridPainter oldDelegate) {
-    return oldDelegate.gridSize != gridSize ||
-           oldDelegate.lineColor != lineColor;
+    return false;
   }
 }

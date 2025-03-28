@@ -3,9 +3,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
+import '../utils/logger.dart';
 
-/// About screen with app information
+/// About screen of the application
 class AboutScreen extends StatelessWidget {
+  /// Create a new about screen
   const AboutScreen({Key? key}) : super(key: key);
 
   @override
@@ -14,187 +16,190 @@ class AboutScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('About'),
       ),
-      body: Container(
-        decoration: AppTheme.backgroundGradient,
-        child: Center(
-          child: SizedBox(
-            width: 500,
-            child: Card(
-              margin: const EdgeInsets.all(16),
-              color: AppTheme.surfaceColor,
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // App logo
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: AppTheme.backgroundColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTheme.primaryColor,
-                          width: 2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.crosshairs,
-                          color: AppTheme.primaryColor,
-                          size: 48,
-                        ),
-                      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // App info
+            Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  // App logo
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    const SizedBox(height: 24),
-                    
-                    // App name
-                    Text(
-                      AppConstants.appName,
-                      style: TextStyle(
-                        color: AppTheme.textColor,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: const Icon(
+                      Icons.adjust,
+                      size: 80,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 8),
-                    
-                    // App version
-                    Text(
-                      'Version ${AppConstants.appVersion}',
-                      style: TextStyle(
-                        color: AppTheme.secondaryTextColor,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // App description
-                    Text(
-                      'A powerful tool for creating, customizing, and exporting gaming crosshairs.',
-                      style: TextStyle(
-                        color: AppTheme.textColor,
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Features section
-                    _buildSection(
-                      title: 'Features',
-                      items: [
-                        'Create and customize crosshairs with various shapes',
-                        'Fine-tune crosshair properties like size, thickness, color',
-                        'Add animations and effects',
-                        'Export as PNG or SVG for use in games',
-                        'Save and manage multiple crosshair profiles',
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Credits section
-                    _buildSection(
-                      title: 'Credits',
-                      items: [
-                        'Developed by Crosshair Studio Team',
-                        'Built with Flutter and C++',
-                        'Icon designs by Game Icons Collection',
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Links
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildLinkButton(
-                          icon: Icons.language,
-                          label: 'Website',
-                          url: 'https://crosshairstudio.example.com',
-                        ),
-                        const SizedBox(width: 16),
-                        _buildLinkButton(
-                          icon: Icons.help_outline,
-                          label: 'Help',
-                          url: 'https://crosshairstudio.example.com/help',
-                        ),
-                        const SizedBox(width: 16),
-                        _buildLinkButton(
-                          icon: Icons.chat_bubble_outline,
-                          label: 'Feedback',
-                          url: 'mailto:feedback@crosshairstudio.example.com',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Copyright
-                    Text(
-                      AppConstants.appCopyright,
-                      style: TextStyle(
-                        color: AppTheme.secondaryTextColor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(height: 16),
+                  // App name
+                  Text(
+                    Constants.appName,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  // App version
+                  Text(
+                    'Version ${Constants.appVersion}',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  // App description
+                  Text(
+                    Constants.appDescription,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  // Divider
+                  const Divider(),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Features
+            _buildSectionHeader(context, 'Features'),
+            _buildFeatureItem(context, 'Create and customize crosshairs for different games'),
+            _buildFeatureItem(context, 'Choose from various shapes, colors, and styles'),
+            _buildFeatureItem(context, 'Organize crosshairs in game profiles'),
+            _buildFeatureItem(context, 'Export crosshairs as PNG images'),
+            _buildFeatureItem(context, 'Export/import profiles as CSV or JSON'),
+            _buildFeatureItem(context, 'Dark mode UI'),
+            
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            
+            // Developer info
+            _buildSectionHeader(context, 'Developer'),
+            // Company name
+            _buildInfoRow(
+              context,
+              Icons.business,
+              Constants.appAuthor,
+              null,
+            ),
+            // Website
+            _buildInfoRow(
+              context,
+              Icons.language,
+              'Website',
+              Constants.appWebsiteUrl,
+              onTap: () => _launchUrl(Constants.appWebsiteUrl),
+            ),
+            // GitHub repository
+            _buildInfoRow(
+              context,
+              Icons.code,
+              'GitHub Repository',
+              Constants.appRepositoryUrl,
+              onTap: () => _launchUrl(Constants.appRepositoryUrl),
+            ),
+            
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            
+            // License
+            _buildSectionHeader(context, 'License'),
+            const Text(
+              'This software is licensed under the MIT License. See the LICENSE file for details.',
+              style: TextStyle(
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '''
+MIT License
+
+Copyright (c) 2023 ${Constants.appAuthor}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+''',
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Attribution
+            Center(
+              child: Text(
+                '© ${DateTime.now().year} ${Constants.appAuthor}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
   }
   
-  /// Build a section with title and bullet points
-  Widget _buildSection({
-    required String title,
-    required List<String> items,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: AppTheme.primaryColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+  /// Build a section header
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.primaryColor,
         ),
-        const SizedBox(height: 12),
-        ...items.map((item) => _buildBulletPoint(item)),
-      ],
+      ),
     );
   }
   
-  /// Build a bullet point
-  Widget _buildBulletPoint(String text) {
+  /// Build a feature item
+  Widget _buildFeatureItem(BuildContext context, String feature) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                shape: BoxShape.circle,
-              ),
-            ),
+          const Icon(
+            Icons.check_circle,
+            color: AppTheme.primaryColor,
+            size: 18,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              text,
-              style: TextStyle(
-                color: AppTheme.textColor,
+              feature,
+              style: const TextStyle(
                 fontSize: 14,
               ),
             ),
@@ -204,24 +209,54 @@ class AboutScreen extends StatelessWidget {
     );
   }
   
-  /// Build a button that links to a URL
-  Widget _buildLinkButton({
-    required IconData icon,
-    required String label,
-    required String url,
+  /// Build an info row
+  Widget _buildInfoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String? value, {
+    VoidCallback? onTap,
   }) {
-    return OutlinedButton.icon(
-      icon: Icon(icon),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppTheme.primaryColor,
-        side: BorderSide(color: AppTheme.primaryColor),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              color: onTap != null ? AppTheme.primaryColor : null,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: onTap != null ? AppTheme.primaryColor : null,
+                    ),
+                  ),
+                  if (value != null)
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: onTap != null ? AppTheme.primaryColor : null,
+                        decoration: onTap != null ? TextDecoration.underline : null,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      onPressed: () => _launchUrl(url),
     );
   }
   
@@ -232,10 +267,10 @@ class AboutScreen extends StatelessWidget {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
       } else {
-        print('Could not launch $url');
+        throw 'Could not launch $url';
       }
     } catch (e) {
-      print('Error launching URL: $e');
+      await Logger.error('Failed to launch URL', e);
     }
   }
 }

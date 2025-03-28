@@ -1,194 +1,184 @@
 import 'dart:convert';
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
-
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/profile_model.dart';
 import '../utils/logger.dart';
 
-/// Service class for managing profiles
-class ProfileService {
-  static const String _profilesDir = 'profiles';
-  static const String _lastProfileKey = 'last_profile';
+/// Service for managing profiles
+class ProfileService extends ChangeNotifier {
+  /// The list of profiles
+  final List<ProfileModel> _profiles = [];
   
-  /// Get the path to the profiles directory
-  static Future<String> _getProfilesPath() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/$_profilesDir';
-    
-    // Create directory if it doesn't exist
-    await Directory(path).create(recursive: true);
-    
-    return path;
-  }
+  /// The ID of the active profile
+  String? _activeProfileId;
   
-  /// Save a profile to disk
-  static Future<void> saveProfile(ProfileModel profile) async {
+  /// The shared preferences key for profiles
+  static const String _profilesPrefsKey = 'profiles';
+  
+  /// The shared preferences key for the active profile ID
+  static const String _activeProfilePrefsKey = 'activeProfileId';
+  
+  /// Get the list of profiles
+  List<ProfileModel> get profiles => List.unmodifiable(_profiles);
+  
+  /// Get the active profile
+  ProfileModel? get activeProfile {
+    if (_activeProfileId == null) {
+      return _profiles.isNotEmpty ? _profiles.first : null;
+    }
+    
     try {
-      final path = await _getProfilesPath();
-      final file = File('$path/${profile.id}.json');
-      
-      // Convert profile to JSON string
-      final jsonString = jsonEncode(profile.toJson());
-      
-      // Write to file
-      await file.writeAsString(jsonString);
-      
-      // Update last used profile
-      await _saveLastUsedProfile(profile.id);
-      
-      await Logger.info('Saved profile: ${profile.name}');
+      return _profiles.firstWhere((p) => p.id == _activeProfileId);
     } catch (e) {
-      await Logger.error('Failed to save profile', e);
-      rethrow;
+      return _profiles.isNotEmpty ? _profiles.first : null;
     }
   }
   
-  /// Load a profile from disk
-  static Future<ProfileModel?> loadProfile(String profileId) async {
+  /// Initialize the service
+  Future<void> initialize() async {
     try {
-      final path = await _getProfilesPath();
-      final file = File('$path/$profileId.json');
+      final prefs = await SharedPreferences.getInstance();
+      final profilesJson = prefs.getStringList(_profilesPrefsKey) ?? [];
+      final activeProfileId = prefs.getString(_activeProfilePrefsKey);
       
-      if (!await file.exists()) {
-        await Logger.warning('Profile not found: $profileId');
-        return null;
+      _profiles.clear();
+      
+      for (final json in profilesJson) {
+        try {
+          final map = jsonDecode(json) as Map<String, dynamic>;
+          final profile = ProfileModel.fromMap(map);
+          _profiles.add(profile);
+        } catch (e) {
+          Logger.error('Failed to parse profile: $e');
+        }
       }
       
-      // Read JSON string from file
-      final jsonString = await file.readAsString();
+      if (_profiles.isEmpty) {
+        _addDefaultProfile();
+      }
       
-      // Parse JSON to profile
-      final json = jsonDecode(jsonString);
-      return ProfileModel.fromJson(json);
+      _activeProfileId = activeProfileId ?? _profiles.first.id;
+      
+      notifyListeners();
     } catch (e) {
-      await Logger.error('Failed to load profile', e);
+      Logger.error('Failed to initialize profile service: $e');
+    }
+  }
+  
+  /// Save the profiles
+  Future<void> _save() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final profilesJson = _profiles.map((p) => jsonEncode(p.toMap())).toList();
+      await prefs.setStringList(_profilesPrefsKey, profilesJson);
+      
+      if (_activeProfileId != null) {
+        await prefs.setString(_activeProfilePrefsKey, _activeProfileId!);
+      }
+    } catch (e) {
+      Logger.error('Failed to save profiles: $e');
+    }
+  }
+  
+  /// Add a profile
+  Future<ProfileModel> addProfile(ProfileModel profile) async {
+    _profiles.add(profile);
+    
+    if (_profiles.length == 1) {
+      _activeProfileId = profile.id;
+    }
+    
+    notifyListeners();
+    await _save();
+    return profile;
+  }
+  
+  /// Update a profile
+  Future<void> updateProfile(ProfileModel profile) async {
+    final index = _profiles.indexWhere((p) => p.id == profile.id);
+    
+    if (index != -1) {
+      _profiles[index] = profile;
+      notifyListeners();
+      await _save();
+    }
+  }
+  
+  /// Delete a profile
+  Future<void> deleteProfile(String id) async {
+    _profiles.removeWhere((p) => p.id == id);
+    
+    if (_activeProfileId == id) {
+      _activeProfileId = _profiles.isNotEmpty ? _profiles.first.id : null;
+    }
+    
+    notifyListeners();
+    await _save();
+  }
+  
+  /// Set the active profile
+  Future<void> setActiveProfile(String id) async {
+    final profile = getProfileById(id);
+    
+    if (profile != null) {
+      _activeProfileId = id;
+      notifyListeners();
+      await _save();
+    }
+  }
+  
+  /// Get a profile by ID
+  ProfileModel? getProfileById(String id) {
+    try {
+      return _profiles.firstWhere((p) => p.id == id);
+    } catch (e) {
       return null;
     }
   }
   
-  /// Delete a profile from disk
-  static Future<bool> deleteProfile(String profileId) async {
-    try {
-      final path = await _getProfilesPath();
-      final file = File('$path/$profileId.json');
+  /// Add a crosshair to a profile
+  Future<void> addCrosshairToProfile(String profileId, String crosshairId) async {
+    final profile = getProfileById(profileId);
+    
+    if (profile != null) {
+      profile.addCrosshairId(crosshairId);
       
-      if (await file.exists()) {
-        await file.delete();
-        await Logger.info('Deleted profile: $profileId');
-        return true;
-      } else {
-        await Logger.warning('Profile not found for deletion: $profileId');
-        return false;
+      if (profile.activeCrosshairId == null) {
+        profile.activeCrosshairId = crosshairId;
       }
-    } catch (e) {
-      await Logger.error('Failed to delete profile', e);
-      return false;
+      
+      notifyListeners();
+      await _save();
     }
   }
   
-  /// Load all profiles from disk
-  static Future<List<ProfileModel>> loadAllProfiles() async {
-    try {
-      final path = await _getProfilesPath();
-      final directory = Directory(path);
-      
-      if (!await directory.exists()) {
-        await Logger.info('Profiles directory does not exist, creating it');
-        await directory.create(recursive: true);
-        return [];
-      }
-      
-      final profiles = <ProfileModel>[];
-      
-      // List all .json files in the profiles directory
-      await for (final file in directory.list()) {
-        if (file is File && file.path.endsWith('.json')) {
-          try {
-            // Read and parse the profile
-            final jsonString = await file.readAsString();
-            final json = jsonDecode(jsonString);
-            profiles.add(ProfileModel.fromJson(json));
-          } catch (e) {
-            await Logger.error('Failed to parse profile file: ${file.path}', e);
-            // Continue with the next file
-          }
-        }
-      }
-      
-      // Sort profiles (favorites first, then by name)
-      profiles.sort((a, b) {
-        if (a.isFavorite && !b.isFavorite) return -1;
-        if (!a.isFavorite && b.isFavorite) return 1;
-        return a.name.compareTo(b.name);
-      });
-      
-      await Logger.info('Loaded ${profiles.length} profiles');
-      return profiles;
-    } catch (e) {
-      await Logger.error('Failed to load profiles', e);
-      return [];
+  /// Remove a crosshair from a profile
+  Future<void> removeCrosshairFromProfile(String profileId, String crosshairId) async {
+    final profile = getProfileById(profileId);
+    
+    if (profile != null) {
+      profile.removeCrosshairId(crosshairId);
+      notifyListeners();
+      await _save();
     }
   }
   
-  /// Save the ID of the last used profile
-  static Future<void> _saveLastUsedProfile(String profileId) async {
-    try {
-      final path = await _getProfilesPath();
-      final file = File('$path/$_lastProfileKey.txt');
-      
-      // Write profile ID to file
-      await file.writeAsString(profileId);
-    } catch (e) {
-      await Logger.error('Failed to save last used profile', e);
+  /// Set the active crosshair for a profile
+  Future<void> setActiveCrosshairForProfile(String profileId, String crosshairId) async {
+    final profile = getProfileById(profileId);
+    
+    if (profile != null) {
+      profile.setActiveCrosshairId(crosshairId);
+      notifyListeners();
+      await _save();
     }
   }
   
-  /// Get the ID of the last used profile
-  static Future<String?> getLastUsedProfileId() async {
-    try {
-      final path = await _getProfilesPath();
-      final file = File('$path/$_lastProfileKey.txt');
-      
-      if (!await file.exists()) {
-        return null;
-      }
-      
-      // Read profile ID from file
-      return await file.readAsString();
-    } catch (e) {
-      await Logger.error('Failed to get last used profile', e);
-      return null;
-    }
-  }
-  
-  /// Initialize default profile if no profiles exist
-  static Future<ProfileModel> initializeDefaultProfile() async {
-    try {
-      final profiles = await loadAllProfiles();
-      
-      if (profiles.isEmpty) {
-        // Create default profile
-        final defaultProfile = ProfileModel.defaultProfile();
-        await saveProfile(defaultProfile);
-        return defaultProfile;
-      } else {
-        // Try to load last used profile
-        final lastProfileId = await getLastUsedProfileId();
-        if (lastProfileId != null) {
-          final lastProfile = await loadProfile(lastProfileId);
-          if (lastProfile != null) {
-            return lastProfile;
-          }
-        }
-        
-        // Use the first profile if last used not found
-        return profiles.first;
-      }
-    } catch (e) {
-      await Logger.error('Failed to initialize default profile', e);
-      // Return a new default profile if everything fails
-      return ProfileModel.defaultProfile();
-    }
+  /// Add default profile
+  void _addDefaultProfile() {
+    _profiles.add(ProfileModel(
+      name: 'Default Profile',
+      description: 'Default profile with predefined crosshairs',
+    ));
   }
 }

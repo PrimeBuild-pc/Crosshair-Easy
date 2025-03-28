@@ -1,145 +1,126 @@
-import 'dart:convert';
-
 import 'package:uuid/uuid.dart';
-
 import 'crosshair_model.dart';
 
-/// Model class for user profiles
+/// A model representing a user profile
 class ProfileModel {
-  /// Unique identifier for the profile
+  /// The unique identifier
   final String id;
   
-  /// Profile name
+  /// The name
   String name;
   
-  /// Profile description
+  /// The description
   String description;
   
-  /// Game name associated with this profile
-  String? gameName;
+  /// The list of crosshair IDs
+  List<String> crosshairIds;
   
-  /// Whether the profile is marked as favorite
-  bool isFavorite;
+  /// The active crosshair ID
+  String? activeCrosshairId;
   
-  /// List of crosshairs in this profile
-  List<CrosshairModel> crosshairs;
+  /// The last modified date
+  DateTime lastModified;
   
-  /// Creation timestamp
-  final DateTime createdAt;
-  
-  /// Last modified timestamp
-  DateTime updatedAt;
-  
-  /// Constructor
+  /// Create a new profile
   ProfileModel({
     String? id,
     this.name = 'New Profile',
-    this.description = 'A collection of crosshairs',
-    this.gameName,
-    this.isFavorite = false,
-    List<CrosshairModel>? crosshairs,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  })  : id = id ?? const Uuid().v4(),
-        crosshairs = crosshairs ?? [CrosshairModel.defaultCrosshair()],
-        createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+    this.description = '',
+    List<String>? crosshairIds,
+    this.activeCrosshairId,
+    DateTime? lastModified,
+  }) : 
+    id = id ?? const Uuid().v4(),
+    crosshairIds = crosshairIds ?? <String>[],
+    lastModified = lastModified ?? DateTime.now();
   
-  /// Create a copy of this profile with some properties replaced
+  /// Create a copy with the given parameters
   ProfileModel copyWith({
     String? name,
     String? description,
-    String? gameName,
-    bool? isFavorite,
-    List<CrosshairModel>? crosshairs,
+    List<String>? crosshairIds,
+    String? activeCrosshairId,
+    DateTime? lastModified,
   }) {
     return ProfileModel(
       id: id,
       name: name ?? this.name,
       description: description ?? this.description,
-      gameName: gameName ?? this.gameName,
-      isFavorite: isFavorite ?? this.isFavorite,
-      crosshairs: crosshairs ?? List.from(this.crosshairs),
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
+      crosshairIds: crosshairIds ?? List.from(this.crosshairIds),
+      activeCrosshairId: activeCrosshairId ?? this.activeCrosshairId,
+      lastModified: lastModified ?? this.lastModified,
     );
   }
   
-  /// Add a crosshair to this profile
-  void addCrosshair(CrosshairModel crosshair) {
-    crosshairs.add(crosshair);
-    updatedAt = DateTime.now();
-  }
-  
-  /// Remove a crosshair from this profile
-  bool removeCrosshair(String crosshairId) {
-    final initialLength = crosshairs.length;
-    crosshairs.removeWhere((c) => c.id == crosshairId);
-    
-    if (crosshairs.length != initialLength) {
-      updatedAt = DateTime.now();
-      return true;
+  /// Add a crosshair ID
+  void addCrosshairId(String id) {
+    if (!crosshairIds.contains(id)) {
+      crosshairIds.add(id);
+      lastModified = DateTime.now();
     }
-    
-    return false;
   }
   
-  /// Update a crosshair in this profile
-  bool updateCrosshair(CrosshairModel updatedCrosshair) {
-    final index = crosshairs.indexWhere((c) => c.id == updatedCrosshair.id);
-    
-    if (index >= 0) {
-      crosshairs[index] = updatedCrosshair;
-      updatedAt = DateTime.now();
-      return true;
+  /// Remove a crosshair ID
+  void removeCrosshairId(String id) {
+    if (crosshairIds.contains(id)) {
+      crosshairIds.remove(id);
+      
+      if (activeCrosshairId == id) {
+        activeCrosshairId = crosshairIds.isNotEmpty ? crosshairIds.first : null;
+      }
+      
+      lastModified = DateTime.now();
     }
-    
-    return false;
   }
   
-  /// Convert to JSON map
-  Map<String, dynamic> toJson() {
+  /// Set the active crosshair ID
+  void setActiveCrosshairId(String id) {
+    if (crosshairIds.contains(id)) {
+      activeCrosshairId = id;
+      lastModified = DateTime.now();
+    }
+  }
+  
+  /// Convert this model to a map
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
       'description': description,
-      'gameName': gameName,
-      'isFavorite': isFavorite,
-      'crosshairs': crosshairs.map((c) => c.toJson()).toList(),
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'crosshairIds': crosshairIds,
+      'activeCrosshairId': activeCrosshairId,
+      'lastModified': lastModified.millisecondsSinceEpoch,
     };
   }
   
-  /// Create from JSON map
-  factory ProfileModel.fromJson(Map<String, dynamic> json) {
-    final crosshairsJson = json['crosshairs'] as List;
-    final crosshairs = crosshairsJson
-        .map((c) => CrosshairModel.fromJson(c))
-        .toList();
-    
+  /// Create a model from a map
+  factory ProfileModel.fromMap(Map<String, dynamic> map) {
     return ProfileModel(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      gameName: json['gameName'],
-      isFavorite: json['isFavorite'],
-      crosshairs: crosshairs,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      id: map['id'],
+      name: map['name'],
+      description: map['description'],
+      crosshairIds: List<String>.from(map['crosshairIds']),
+      activeCrosshairId: map['activeCrosshairId'],
+      lastModified: DateTime.fromMillisecondsSinceEpoch(map['lastModified']),
     );
   }
   
-  /// Create a default profile
-  factory ProfileModel.defaultProfile() {
-    return ProfileModel(
-      name: 'Default Profile',
-      description: 'Default collection of crosshairs',
-      crosshairs: [
-        CrosshairModel.defaultCrosshair(),
-        CrosshairModel.dotCrosshair(),
-        CrosshairModel.circleCrosshair(),
-      ],
-    );
+  /// Convert to CSV format
+  String toCsv(List<CrosshairModel> crosshairs) {
+    final buffer = StringBuffer();
+    buffer.writeln('"$id","$name","$description","${lastModified.toIso8601String()}"');
+    
+    for (final crosshair in crosshairs) {
+      if (crosshairIds.contains(crosshair.id)) {
+        buffer.writeln(crosshair.toCsv());
+      }
+    }
+    
+    return buffer.toString();
+  }
+  
+  /// Get CSV header
+  static String csvHeader() {
+    return '"ID","Name","Description","LastModified"\n${CrosshairModel.csvHeader()}';
   }
 }

@@ -1,48 +1,42 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
-
-/// A custom slider widget with label and value display
+/// A custom slider with a label
 class CustomSlider extends StatelessWidget {
-  /// Label for the slider
-  final String label;
-  
-  /// Current value
+  /// The current value
   final double value;
   
-  /// Minimum value
-  final double min;
-  
-  /// Maximum value
-  final double max;
-  
-  /// Number of decimal places to display
-  final int decimalPlaces;
-  
-  /// Optional unit to display after the value
-  final String? unit;
-  
-  /// Whether to display integer values only
-  final bool integerOnly;
-  
-  /// Optional custom color for the slider
-  final Color? activeColor;
-  
-  /// Callback when value changes
+  /// Callback when the value changes
   final ValueChanged<double> onChanged;
   
-  /// Constructor
+  /// The minimum value
+  final double min;
+  
+  /// The maximum value
+  final double max;
+  
+  /// The number of divisions
+  final int? divisions;
+  
+  /// The label
+  final String label;
+  
+  /// The label format
+  final String? labelFormat;
+  
+  /// Whether the slider is disabled
+  final bool disabled;
+  
+  /// Create a new custom slider
   const CustomSlider({
     Key? key,
-    required this.label,
     required this.value,
-    required this.min,
-    required this.max,
-    this.decimalPlaces = 1,
-    this.unit,
-    this.integerOnly = false,
-    this.activeColor,
     required this.onChanged,
+    required this.label,
+    this.min = 0.0,
+    this.max = 1.0,
+    this.divisions,
+    this.labelFormat,
+    this.disabled = false,
   }) : super(key: key);
 
   @override
@@ -50,105 +44,116 @@ class CustomSlider extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label and value
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               label,
-              style: TextStyle(
-                color: AppTheme.textColor,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               _formatValue(value),
               style: TextStyle(
-                color: AppTheme.textColor,
+                color: disabled ? Colors.grey : null,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        
-        // Slider row with min/max labels
-        Row(
-          children: [
-            // Min value label
-            SizedBox(
-              width: 24,
-              child: Text(
-                _formatValue(min),
-                style: TextStyle(
-                  color: AppTheme.secondaryTextColor,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-            
-            // Slider
-            Expanded(
-              child: SliderTheme(
-                data: SliderThemeData(
-                  activeTrackColor: activeColor ?? AppTheme.primaryColor,
-                  inactiveTrackColor: AppTheme.backgroundColor,
-                  thumbColor: activeColor ?? AppTheme.primaryColor,
-                  trackHeight: 4,
-                ),
-                child: Slider(
-                  value: value,
-                  min: min,
-                  max: max,
-                  divisions: integerOnly ? (max - min).round() : (max - min) * 10.0 ~/ 1,
-                  onChanged: (newValue) {
-                    if (integerOnly) {
-                      onChanged(newValue.roundToDouble());
-                    } else {
-                      onChanged(newValue);
-                    }
-                  },
-                ),
-              ),
-            ),
-            
-            // Max value label
-            SizedBox(
-              width: 24,
-              child: Text(
-                _formatValue(max),
-                style: TextStyle(
-                  color: AppTheme.secondaryTextColor,
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
+        const SizedBox(height: 8),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 4,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            valueIndicatorShape: const PaddleSliderValueIndicatorShape(),
+            valueIndicatorTextStyle: const TextStyle(fontSize: 12),
+          ),
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: _formatValue(value),
+            onChanged: disabled ? null : onChanged,
+          ),
         ),
       ],
     );
   }
   
-  // Format the value for display
+  /// Format the value based on the label format
   String _formatValue(double value) {
-    String formattedValue;
-    
-    if (integerOnly) {
-      formattedValue = value.round().toString();
-    } else {
-      formattedValue = value.toStringAsFixed(decimalPlaces);
-      // Remove trailing zeros
-      if (formattedValue.contains('.')) {
-        formattedValue = formattedValue.replaceAll(RegExp(r'0+$'), '');
-        formattedValue = formattedValue.replaceAll(RegExp(r'\.$'), '');
-      }
+    if (labelFormat == null) {
+      return value.toStringAsFixed(1);
     }
     
-    // Add unit if provided
-    if (unit != null) {
-      formattedValue += ' $unit';
-    }
-    
-    return formattedValue;
+    return labelFormat!.replaceAll('{value}', value.toStringAsFixed(1));
+  }
+}
+
+/// A custom toggle with a label
+class CustomToggle extends StatelessWidget {
+  /// The current value
+  final bool value;
+  
+  /// Callback when the value changes
+  final ValueChanged<bool> onChanged;
+  
+  /// The label
+  final String label;
+  
+  /// The description
+  final String? description;
+  
+  /// Whether the toggle is disabled
+  final bool disabled;
+  
+  /// Create a new custom toggle
+  const CustomToggle({
+    Key? key,
+    required this.value,
+    required this.onChanged,
+    required this.label,
+    this.description,
+    this.disabled = false,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: disabled ? 0.5 : 1.0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (description != null)
+                  Text(
+                    description!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: disabled ? null : onChanged,
+          ),
+        ],
+      ),
+    );
   }
 }
