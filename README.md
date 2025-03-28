@@ -33,6 +33,16 @@ Benvenuto in **Crosshair Easy**! 🖱️ Un'applicazione Flutter progettata per 
 
 ![Anteprima dell'Applicazione](assets/screenshot.png)
 
+---
+
+## 💖 Supporta il progetto
+
+Ti piace questo tool? Offrimi un caffè ☕:
+
+[![PayPal](https://img.shields.io/badge/Supporta%20su-PayPal-blue?logo=paypal)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+
+---
+
 ## 🤝 Contributi
 
 Contributi, segnalazioni di bug e suggerimenti sono i benvenuti! Sentiti libero di aprire una [issue](https://github.com/PrimeBuild-pc/Crosshair-Easy/issues) o inviare una [pull request](https://github.com/PrimeBuild-pc/Crosshair-Easy/pulls).
