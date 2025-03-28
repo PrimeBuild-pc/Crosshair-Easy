@@ -1,6 +1,4 @@
-Certo! Ecco una bozza per il tuo `README.md`, formattata in modo accattivante e arricchita con emoji:
-
----
+<h1 align="center">❗ Not yet completed ❗</h1>
 
 # 🎯 Crosshair Easy
 
@@ -42,7 +40,3 @@ Contributi, segnalazioni di bug e suggerimenti sono i benvenuti! Sentiti libero 
 ## 📄 Licenza
 
 Questo progetto è distribuito sotto licenza MIT. Vedi il file [LICENSE](LICENSE) per maggiori dettagli.
-
----
-
-Spero che questo `README.md` soddisfi le tue esigenze e renda il tuo repository più accattivante per gli utenti! 
