@@ -1,0 +1,7 @@
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/crosshair_engine.dir
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/edit_cache.dir
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/rebuild_cache.dir
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/list_install_components.dir
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/install.dir
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/install/local.dir
+C:/Users/Administrator/Desktop/CrosshairCrafterPro/CrosshairCrafterPro/native/build/CMakeFiles/install/strip.dir
